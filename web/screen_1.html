@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Airbnb ML Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+}
+
+.container {
+    display: flex;
+    height: 100vh;
+}
+
+.sidebar {
+    width: 35%;
+    padding: 20px;
+    background: #f4f4f4;
+    overflow-y: auto;
+}
+
+.content {
+    width: 65%;
+    padding: 20px;
+}
+
+input, select, button {
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 8px;
+}
+
+button {
+    background: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #0056b3;
+}
+
+canvas {
+    background: white;
+    border: 1px solid #ddd;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<!-- LEFT PANEL -->
+<div class="sidebar">
+<h2>Manual Prediction</h2>
+
+<h3>Numeric Features</h3>
+
+<input type="number" id="service_fee" placeholder="Service fee">
+<input type="number" id="minimum_nights" placeholder="Minimum nights">
+<input type="number" id="number_of_reviews" placeholder="Number of reviews">
+<input type="number" step="0.1" id="reviews_per_month" placeholder="Reviews per month">
+<input type="number" step="0.1" id="review_rate_number" placeholder="Review rate number">
+<input type="number" id="calculated_host_listings_count" placeholder="Host listings count">
+<input type="number" id="availability_365" placeholder="Availability 365">
+<input type="number" step="0.0001" id="lat" placeholder="Latitude">
+<input type="number" step="0.0001" id="long" placeholder="Longitude">
+<input type="number" id="construction_year" placeholder="Construction year">
+
+<h3>Categorical Features</h3>
+
+<select id="room_type">
+    <option value="Entire home/apt">Entire home/apt</option>
+    <option value="Private room">Private room</option>
+    <option value="Shared room">Shared room</option>
+</select>
+
+<input type="text" id="neighbourhood_group" placeholder="Neighbourhood group">
+
+<button onclick="predictSingle()">Predict</button>
+
+<hr>
+
+<h2>Batch CSV Prediction</h2>
+<input type="file" id="csvFile" accept=".csv">
+<button onclick="uploadFile()">Predict CSV</button>
+
+<h3>Metrics</h3>
+<p id="metrics"></p>
+</div>
+
+<!-- RIGHT PANEL -->
+<div class="content">
+<h2>Prediction Chart</h2>
+<canvas id="priceChart" height="120"></canvas>
+<h3 id="singlePrediction"></h3>
+</div>
+
+</div>
+
+<script>
+
+let chart;
+
+function createChart(labels, predicted, actual=null) {
+    const ctx = document.getElementById("priceChart").getContext("2d");
+    if (chart) chart.destroy();
+
+    const datasets = [{
+        label: "Predicted",
+        data: predicted,
+        borderColor: "blue",
+        fill: false,
+        tension: 0.1
+    }];
+
+    if (actual) {
+        datasets.push({
+            label: "Actual",
+            data: actual,
+            borderColor: "red",
+            fill: false,
+            tension: 0.1
+        });
+    }
+
+    chart = new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: labels,
+            datasets: datasets
+        },
+        options: {
+            responsive: true
+        }
+    });
+}
+
+async function predictSingle() {
+
+    const data = {
+        service_fee: Number(service_fee.value),
+        minimum_nights: Number(minimum_nights.value),
+        number_of_reviews: Number(number_of_reviews.value),
+        reviews_per_month: Number(reviews_per_month.value),
+        review_rate_number: Number(review_rate_number.value),
+        calculated_host_listings_count: Number(calculated_host_listings_count.value),
+        availability_365: Number(availability_365.value),
+        lat: Number(lat.value),
+        long: Number(long.value),
+        construction_year: Number(construction_year.value),
+        room_type: room_type.value,
+        neighbourhood_group: neighbourhood_group.value
+    };
+
+    const response = await fetch("/predict/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+    });
+
+    const result = await response.json();
+
+    document.getElementById("singlePrediction").innerText =
+        "Predicted price: $" + result.predicted_price.toFixed(2);
+
+    createChart([1], [result.predicted_price]);
+}
+
+async function uploadFile() {
+
+    const fileInput = document.getElementById("csvFile");
+    if (!fileInput.files.length) {
+        alert("Select CSV file");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", fileInput.files[0]);
+
+    const response = await fetch("/predict_csv/", {
+        method: "POST",
+        body: formData
+    });
+
+    const data = await response.json();
+
+    const labels = data.predictions.map((_, i) => i + 1);
+
+    createChart(labels, data.predictions, data.actual_prices);
+
+    document.getElementById("metrics").innerHTML = `
+        MSE: ${data.mse ? data.mse.toFixed(2) : "N/A"} <br>
+        RMSE: ${data.rmse ? data.rmse.toFixed(2) : "N/A"}
+    `;
+}
+
+</script>
+</body>
+</html>
