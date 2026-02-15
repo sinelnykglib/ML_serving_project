@@ -2,14 +2,30 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
+# Встановлюємо curl для healthcheck
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Копіюємо всі необхідні директорії згідно з вашою структурою
 COPY ./app ./app
+COPY ./web ./web
+COPY ./training ./training
 COPY ./model ./model
+COPY ./mlruns ./mlruns
+
+# Копіюємо файл моделі з правильної локації
+# Ваша модель знаходиться в mlruns/1/models/m-726779d47628485d8a.../artifacts/model.pkl
+RUN mkdir -p /app/model && \
+    cp -r /app/mlruns/1/models/m-726779d47628485d8a*/artifacts/* /app/model/ 2>/dev/null || true
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+  CMD curl -f http://localhost:8000/docs || exit 1
 
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

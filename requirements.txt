@@ -3,6 +3,7 @@ pandas>=2.0
 numpy>=1.25
 scikit-learn>=1.3
 xgboost>=1.7
+joblib>=1.3  # додав, бо використовуєте joblib
 
 # ML experiment tracking
 mlflow>=2.8
@@ -12,9 +13,9 @@ fastapi>=0.101
 uvicorn[standard]>=0.23
 pydantic>=2.5
 
-# Optional utilities
-python-multipart>=0.0.6  # якщо плануєш file upload через API
-requests>=2.32           # якщо фронтенд робить тестові fetch запити через Python
+# File upload
+python-multipart>=0.0.6
 
-# Docker-friendly
-gunicorn>=22.1.0         # для production deployment, якщо замість uvicorn хочеш
+# Optional
+requests>=2.32
+gunicorn>=22.1.0
