@@ -80,6 +80,18 @@ canvas {
     <option value="Shared room">Shared room</option>
 </select>
 
+<h3>Binary Features</h3>
+
+<select id="instant_bookable">
+    <option value="true">Yes</option>
+    <option value="false">No</option>
+</select>
+
+<select id="host_identity_verified">
+    <option value="true">Yes</option>
+    <option value="false">No</option>
+</select>
+
 <input type="text" id="neighbourhood_group" placeholder="Neighbourhood group">
 
 <button onclick="predictSingle()">Predict</button>
@@ -142,20 +154,21 @@ function createChart(labels, predicted, actual=null) {
 }
 
 async function predictSingle() {
-
     const data = {
-        service_fee: Number(service_fee.value),
-        minimum_nights: Number(minimum_nights.value),
-        number_of_reviews: Number(number_of_reviews.value),
-        reviews_per_month: Number(reviews_per_month.value),
-        review_rate_number: Number(review_rate_number.value),
-        calculated_host_listings_count: Number(calculated_host_listings_count.value),
-        availability_365: Number(availability_365.value),
-        lat: Number(lat.value),
-        long: Number(long.value),
-        construction_year: Number(construction_year.value),
-        room_type: room_type.value,
-        neighbourhood_group: neighbourhood_group.value
+        service_fee: Number(document.getElementById("service_fee").value) || 0,
+        minimum_nights: Number(document.getElementById("minimum_nights").value) || 1,
+        number_of_reviews: Number(document.getElementById("number_of_reviews").value) || 0,
+        reviews_per_month: Number(document.getElementById("reviews_per_month").value) || 0,
+        review_rate_number: Number(document.getElementById("review_rate_number").value) || 0,
+        calculated_host_listings_count: Number(document.getElementById("calculated_host_listings_count").value) || 0,
+        availability_365: Number(document.getElementById("availability_365").value) || 0,
+        lat: Number(document.getElementById("lat").value) || 0,
+        long: Number(document.getElementById("long").value) || 0,
+        construction_year: Number(document.getElementById("construction_year").value) || 0,
+        room_type: document.getElementById("room_type").value,
+        neighbourhood_group: document.getElementById("neighbourhood_group").value || "unknown",
+        instant_bookable: document.getElementById("instant_bookable").value,
+        host_identity_verified: document.getElementById("host_identity_verified").value
     };
 
     const response = await fetch("/predict/", {
@@ -165,10 +178,8 @@ async function predictSingle() {
     });
 
     const result = await response.json();
-
     document.getElementById("singlePrediction").innerText =
         "Predicted price: $" + result.predicted_price.toFixed(2);
-
     createChart([1], [result.predicted_price]);
 }
 
